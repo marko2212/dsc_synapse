@@ -1,0 +1,17 @@
+{
+	"name": "prc_create_dataset",
+	"properties": {
+		"content": {
+			"query": "-- STORE PROCEDURE\nDROP PROCEDURE prc.create_dataset\nGO; \n\nCREATE PROCEDURE prc.create_dataset\nAS\n\n    TRUNCATE TABLE src.dataset;\n\n    INSERT INTO src.dataset (datum, quantity)\n    SELECT \n        STVARNI_DATUM_ISPORUKE AS date,\n        SUM(KOLICINA * paket) AS quantity\n    FROM dbo.Skladiste_palet\n    LEFT JOIN dbo.Paket_per_palet\n    ON Skladiste_palet.MATERIJAL = Paket_per_palet.materijal\n    WHERE KOLICINA > 0 AND POGON = 'PG10'\n    GROUP BY STVARNI_DATUM_ISPORUKE\n    --ORDER BY STVARNI_DATUM_ISPORUKE ASC\n;\n\n    SELECT COUNT(*) AS inserted_row FROM src.dataset;\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "dsc100dw",
+				"poolName": "dsc100dw"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

@@ -1,0 +1,701 @@
+{
+	"name": "Work presentation_Copy1",
+	"properties": {
+		"folder": {
+			"name": "archive"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "SparkPool4v32gb",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"runAsWorkspaceSystemIdentity": false,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "e954650c-b6d6-4a31-bba5-7b29c01779d0"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"synapse_widget": {
+				"version": "0.1",
+				"state": {
+					"ff155d0d-6b64-4bb9-a9e4-f197fcd17281": {
+						"type": "Synapse.DataFrame",
+						"sync_state": {
+							"table": {
+								"rows": [
+									{
+										"0": "1.6.2019",
+										"1": "6660"
+									},
+									{
+										"0": "3.6.2019",
+										"1": "12261"
+									}
+								],
+								"schema": [
+									{
+										"key": "0",
+										"name": "DATUM",
+										"type": "string"
+									},
+									{
+										"key": "1",
+										"name": "Kolicina",
+										"type": "string"
+									}
+								],
+								"truncated": false
+							},
+							"isSummary": false,
+							"language": "scala"
+						},
+						"persist_state": {
+							"view": {
+								"type": "details",
+								"chartOptions": {
+									"chartType": "bar",
+									"aggregationType": "count",
+									"categoryFieldKeys": [
+										"0"
+									],
+									"seriesFieldKeys": [
+										"0"
+									],
+									"isStacked": false
+								}
+							}
+						}
+					}
+				}
+			},
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/851deb7a-8088-47ca-983d-6e2ffacc52c1/resourceGroups/Azure_DataBrics/providers/Microsoft.Synapse/workspaces/workspacedsc/bigDataPools/SparkPool4v32gb",
+				"name": "SparkPool4v32gb",
+				"type": "Spark",
+				"endpoint": "https://workspacedsc.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/SparkPool4v32gb",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net",
+					"authHeader": null
+				},
+				"sparkVersion": "3.2",
+				"nodeCount": 10,
+				"cores": 4,
+				"memory": 28,
+				"extraHeader": null
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"import numpy as np\r\n",
+					"import pandas as pd\r\n",
+					"from pandas.plotting import autocorrelation_plot\r\n",
+					"import matplotlib as mpl\r\n",
+					"import matplotlib.pyplot as pyplot\r\n",
+					"import matplotlib.pyplot as plt\r\n",
+					"import seaborn as sns\r\n",
+					"from datetime import datetime, timedelta\r\n",
+					"import time\r\n",
+					"from dateutil.parser import parse \r\n",
+					"import math\r\n",
+					"from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error   # metrics\r\n",
+					"from statsmodels.tsa.seasonal import seasonal_decompose\r\n",
+					"from statsmodels.graphics.tsaplots import plot_pacf\r\n",
+					"from statsmodels.tsa.statespace.sarimax import SARIMAX\r\n",
+					"from statsmodels.tsa.ar_model import AutoReg\r\n",
+					"from statsmodels.tsa.arima.model import ARIMA\r\n",
+					"import pmdarima as pm\r\n",
+					"\r\n",
+					"import warnings\r\n",
+					"warnings.simplefilter(\"ignore\")\r\n",
+					"\r\n",
+					"pyplot.rcParams.update({'figure.figsize': (10, 7), 'figure.dpi': 120})\r\n",
+					"print('Libs are imported')"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### Create function that add all missing date"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"def add_all_date(df, whitout_sun=0):\r\n",
+					"  rng = pd.date_range(start = df.index[0], end =df.index[-1],  freq='D')        # pocetni datum je prvi index (datum), rajnji datum je poslednji red indexa\r\n",
+					"  df_date_temp = pd.DataFrame({ 'DATUM': rng}) \r\n",
+					"  if whitout_sun == 1:\r\n",
+					"    df_date_temp = df_date_temp[df_date_temp['DATUM'].dt.weekday != 6]          # removing sunday (6) from dummy df_date_temp\r\n",
+					"  df_date_temp.set_index('DATUM', inplace=True)                                 # set column date as index\r\n",
+					"  df = df[df.index.weekday != 6]                                                # removing sunday (6) from df\r\n",
+					"  df = df_date_temp.join(df)                                                    # left join dataset on dummy date\r\n",
+					"  df = df.fillna(0)                                                             # fill NaN values with 0\r\n",
+					"  df = df.iloc[:,-1:].astype(int)                                               # convert string to int\r\n",
+					"  return df"
+				],
+				"execution_count": 4
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#### Azure database connection string"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# # credentials\r\n",
+					"# jdbcHostname = \"srv-db-sql-dmd.database.windows.net\"\r\n",
+					"# jdbcDatabase = \"db-sql-dmd\"\r\n",
+					"# jdbcPort = \"1433\"\r\n",
+					"# username = \"marko\"\r\n",
+					"# password = \"5Avramovic!\"\r\n",
+					"# jdbcUrl = \"jdbc:sqlserver://{0}:{1};database={2}\".format(jdbcHostname, jdbcPort, jdbcDatabase)\r\n",
+					"# connectionProperties = {\r\n",
+					"#     \"user\" : username,\r\n",
+					"#     \"password\" : password,\r\n",
+					"#     \"driver\" : \"com.microsoft.sqlserver.jdbc.SQLServerDriver\"\r\n",
+					"# }"
+				],
+				"execution_count": 5
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### Evaluating the models with data - create function"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"def metric_table(test, predictions):\r\n",
+					"  mse = mean_squared_error(test, predictions)\r\n",
+					"  model_r2, model_RMSE, model_MAE, model_MSE, model_Adj_R2 = [], [], [], [], []\r\n",
+					"\r\n",
+					"  r2 = r2_score(test, predictions)\r\n",
+					"  rmse = np.sqrt(mean_squared_error(test, predictions))\r\n",
+					"  mae = mean_absolute_error(test, predictions)\r\n",
+					"  mse = mean_squared_error(test, predictions)\r\n",
+					"  # mape = mean_absolute_percentage_error(test, predictions)\r\n",
+					"  adj_r2 = 1-(1-r2)*(test.shape[0]-1)/(test.shape[0]-1-1)\r\n",
+					"\r\n",
+					"  model_r2.append(r2)\r\n",
+					"  model_RMSE.append(rmse)\r\n",
+					"  model_MAE.append(mae)\r\n",
+					"  model_MSE.append(mse)\r\n",
+					"  # model_MAPE.append(mape)\r\n",
+					"  model_Adj_R2.append(adj_r2)\r\n",
+					"\r\n",
+					"  df_result = pd.DataFrame({\"R2\":model_r2, \"Adj_R2\": model_Adj_R2, \"RMSE\": model_RMSE, \"MAE\":model_MAE, \"MSE\": model_MSE})\r\n",
+					"  df_result = round(df_result,3)\r\n",
+					"  df_result = df_result.sort_values(\"R2\", ascending=False)\r\n",
+					"  df_result\r\n",
+					"  return df_result"
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### Create arima function"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"def arima(df, order = [3,0,0], n = 15):\r\n",
+					"    \r\n",
+					"    # order = [28,0,0]\r\n",
+					"    # order = [3,0,0]\r\n",
+					"    model = ARIMA(df, order=(order))\r\n",
+					"    model_fit = model.fit()\r\n",
+					"    prediction = model_fit.forecast(n)\r\n",
+					"\r\n",
+					"    # korekcije\r\n",
+					"    prediction = prediction.clip(lower=0)                                         # sve negativne vrednosti svedi na 0\r\n",
+					"    prediction = add_all_date(prediction)                                         # set sundey to 0\r\n",
+					"    prediction = prediction.rename(columns={'predicted_mean': 'prediction'})        # set the name of column as item\r\n",
+					"    prediction.head()\r\n",
+					"    return prediction"
+				],
+				"execution_count": 7
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### Import dataset"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# # covert index to column\r\n",
+					"# prediction_contaier['DATUM'] = prediction_contaier.index                      \r\n",
+					"# # sat DATUM column to be first\r\n",
+					"# column_name = list(prediction_contaier.columns.values)\r\n",
+					"# column_name_wo_datum = column_name\r\n",
+					"# column_name_wo_datum.remove('DATUM')\r\n",
+					"# prediction_contaier = prediction_contaier[['DATUM'] + column_name_wo_datum]\r\n",
+					"# prediction_contaier.head()\r\n",
+					"\r\n",
+					"\r\n",
+					"# # Output using Spark\r\n",
+					"# folder_name = brend\r\n",
+					"# (sqlContext.createDataFrame(prediction_contaier)\r\n",
+					"#  .coalesce(1)\r\n",
+					"#  .write\r\n",
+					"#  .mode(\"overwrite\")\r\n",
+					"#  .option(\"header\", \"true\")\r\n",
+					"#  .format(\"com.databricks.spark.csv\")\r\n",
+					"#  .save('abfss://processed@dlsynapsedts.dfs.core.windows.net/dmd/' + folder_name))"
+				],
+				"execution_count": 8
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### Load data from Data Lake to Spark df; convert df_spark to Pandas"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"from pyspark.sql import SparkSession\r\n",
+					"from pyspark.sql.types import *\r\n",
+					"account_name = \"datalakedsc\"\r\n",
+					"container_name = \"fsdatalakedsc\"\r\n",
+					"relative_path = \"\"\r\n",
+					"adls_path = 'abfss://%s@%s.dfs.core.windows.net/%s' % (container_name, account_name, relative_path)\r\n",
+					"\r\n",
+					"df_spark = spark.read.option('header', 'true') \\\r\n",
+					"                .option('delimiter', ',') \\\r\n",
+					"                .csv(adls_path + '/dataset.csv')\r\n",
+					"\r\n",
+					"display(df_spark.limit(2))\r\n",
+					"\r\n",
+					"df = df_spark.toPandas()                      # Spark df to Pandas df\r\n",
+					"df = df.sort_values(by=\"DATUM\")               # Sort dataframe by date\r\n",
+					"df.set_index('DATUM', inplace=True)           # convert DATUM column to index\r\n",
+					"df.index = pd.to_datetime(df.index)           # convert index to datetime\r\n",
+					"df = add_all_date(df, )                       # add all missing date with (df, 0) or without (df, 1) sunday\r\n",
+					"df.tail(2)"
+				],
+				"execution_count": 9
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### Load data from Dedicated Pool to Spark df; convert df_spark to Pandas"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# Add required imports\r\n",
+					"import com.microsoft.spark.sqlanalytics\r\n",
+					"\r\n",
+					"df_spark = spark.read.synapsesql(\"dsc100dw.dbo.Paket_per_palet\") \r\n",
+					"# Show contents of the dataframe\r\n",
+					"\r\n",
+					"df = df_spark.toPandas()                      # Spark df to Pandas df\r\n",
+					"# df = df.sort_values(by=\"DATUM\")               # Sort dataframe by date\r\n",
+					"# df.set_index('DATUM', inplace=True)           # convert DATUM column to index\r\n",
+					"# df.index = pd.to_datetime(df.index)           # convert index to datetime\r\n",
+					"# df = add_all_date(df, )                       # add all missing date with (df, 0) or without (df, 1) sunday\r\n",
+					"df.tail(2)"
+				],
+				"execution_count": 14
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### ODBC Credentials - Dedicated pool"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# credentials\r\n",
+					"jdbcHostname = \"workspacedsc.sql.azuresynapse.net\"\r\n",
+					"jdbcDatabase = \"dsc100dw\"\r\n",
+					"jdbcPort = \"1433\"\r\n",
+					"username = \"sqladminuser\"\r\n",
+					"password = \"5Avramovic!\"\r\n",
+					"jdbcUrl = \"jdbc:sqlserver://{0}:{1};database={2}\".format(jdbcHostname, jdbcPort, jdbcDatabase)\r\n",
+					"connectionProperties = {\r\n",
+					"    \"user\" : username,\r\n",
+					"    \"password\" : password,\r\n",
+					"    \"driver\" : \"com.microsoft.sqlserver.jdbc.SQLServerDriver\"\r\n",
+					"}\r\n",
+					"\r\n",
+					"\r\n",
+					"# pushdown_query = \"(SELECT * FROM {2} ) {1}\".format(item,brend,table) \r\n",
+					"# df_spark = spark.read.jdbc(url=jdbcUrl, table=pushdown_query, properties=connectionProperties)\r\n",
+					"\r\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# # credentials\r\n",
+					"# jdbcHostname = \"srv-db-sql-dmd.database.windows.net\"\r\n",
+					"# jdbcDatabase = \"db-sql-dmd\"\r\n",
+					"# jdbcPort = \"1433\"\r\n",
+					"# username = \"marko\"\r\n",
+					"# password = \"5Avramovic!\"\r\n",
+					"# jdbcUrl = \"jdbc:sqlserver://{0}:{1};database={2}\".format(jdbcHostname, jdbcPort, jdbcDatabase)\r\n",
+					"# connectionProperties = {\r\n",
+					"#     \"user\" : username,\r\n",
+					"#     \"password\" : password,\r\n",
+					"#     \"driver\" : \"com.microsoft.sqlserver.jdbc.SQLServerDriver\"\r\n",
+					"# }"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# jdbc:sqlserver://workspacedsc.sql.azuresynapse.net:1433;database=dsc100dw;user=sqladminuser@workspacedsc;password={your_password_here};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.sql.azuresynapse.net;loginTimeout=30;"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# %%spark\r\n",
+					"# val df_spark = spark.read.synapsesql(\"dsc100dw.dbo.Paket_per_palet\") \r\n",
+					"# // val df = spark.read.synapsesql(\"dsc100dw.dbo.dataset\") \r\n",
+					"# df_spark.write.mode(\"overwrite\").saveAsTable(\"default.t1\")\r\n",
+					"# display(df_spark.limit(5))"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# Add required imports\r\n",
+					"import com.microsoft.spark.sqlanalytics\r\n",
+					"from com.microsoft.spark.sqlanalytics.Constants import Constants\r\n",
+					"from pyspark.sql.functions import col\r\n",
+					"\r\n",
+					"\r\n",
+					"df_spark = spark.read.synapsesql(\"dsc100dw.dbo.Paket_per_palet\")\r\n",
+					"# Show contents of the dataframe\r\n",
+					"# df_spark.show()\r\n",
+					"\r\n",
+					"df = df_spark.toPandas()\r\n",
+					"\r\n",
+					"df.head()"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"spark.read.synapsesql(\"dsc100dw.dbo.Paket_per_palet\") "
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"def import_ds_total(item, brend, table):\r\n",
+					"    pushdown_query = \"(SELECT DATUM, {0} FROM {2} ) {1}\".format(item,brend,table) \r\n",
+					"    df_spark = spark.read.jdbc(url=jdbcUrl, table=pushdown_query, properties=connectionProperties)\r\n",
+					"    df = df_spark.toPandas()                      # Spark df to Pandas df\r\n",
+					"    df = df.sort_values(by=\"DATUM\")               # Sort dataframe by date\r\n",
+					"    df.set_index('DATUM', inplace=True)           # convert DATUM column to index\r\n",
+					"    df.index = pd.to_datetime(df.index)           # convert index to datetime\r\n",
+					"    df = add_all_date(df, )                       # add all missing date with (df, 0) or without (df, 1) sunday\r\n",
+					"    df.head(2)\r\n",
+					"    return df \r\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# df = spark.read.csv('abfss://row@dlsynapsedts.dfs.core.windows.net/dmd/SAP/DMD_2020.csv')\r\n",
+					"# df = spark.read.csv('wasbs://fsdatalakedsc@datalakedsc.blob.core.windows.net/dataset.csv')\r\n",
+					"df = spark.read.csv('https://datalakedsc.blob.core.windows.net/fsdatalakedsc/dataset.csv')\r\n",
+					"\r\n",
+					"# wasbs://fsdatalakedsc@datalakedsc.blob.core.windows.net/dataset.csv\r\n",
+					"\r\n",
+					""
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"import pandas as pd\r\n",
+					"df = pd.read_csv(\"dataset.csv\")\r\n",
+					"df\r\n",
+					"\r\n",
+					"# add all missing date with 0\r\n",
+					"df = df.sort_values(by=\"DATUM\")               # Sort dataframe by date\r\n",
+					"df.set_index('DATUM', inplace=True)           # convert DATUM column to index\r\n",
+					"df.index = pd.to_datetime(df.index)           # convert index to datetime\r\n",
+					"df = add_all_date(df, )                       # add all missing date with (df, 0) or without (df, 1) sunday\r\n",
+					"df.head(2)\r\n",
+					"df\r\n",
+					"\r\n",
+					"# df = df.iloc[:-78, -1:]"
+				]
+			}
+		]
+	}
+}

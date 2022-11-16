@@ -1,0 +1,27 @@
+{
+	"name": "ds_syn_ded_pool_Skladiste_palet",
+	"properties": {
+		"annotations": [],
+		"type": "SqlPoolTable",
+		"schema": [
+			{
+				"name": "DATUM",
+				"type": "nvarchar"
+			},
+			{
+				"name": "kolicina",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "Skladiste_palet"
+		},
+		"sqlPool": {
+			"referenceName": "dsc100dw",
+			"type": "SqlPoolReference"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

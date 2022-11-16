@@ -1,0 +1,158 @@
+{
+	"name": "pi_cp_opendata_http_dl",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy opendata http to dl",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "HttpReadSettings",
+							"requestMethod": "GET"
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"path": "$['idindikator']"
+								},
+								"sink": {
+									"path": "idindikator"
+								}
+							},
+							{
+								"source": {
+									"path": "$['IDTer']"
+								},
+								"sink": {
+									"path": "IDTer"
+								}
+							},
+							{
+								"source": {
+									"path": "$['nTer']"
+								},
+								"sink": {
+									"path": "nTer"
+								}
+							},
+							{
+								"source": {
+									"path": "$['IDTipNaselja']"
+								},
+								"sink": {
+									"path": "IDTipNaselja"
+								}
+							},
+							{
+								"source": {
+									"path": "$['nTipNaselja']"
+								},
+								"sink": {
+									"path": "nTipNaselja"
+								}
+							},
+							{
+								"source": {
+									"path": "$['mes']"
+								},
+								"sink": {
+									"path": "mes"
+								}
+							},
+							{
+								"source": {
+									"path": "$['god']"
+								},
+								"sink": {
+									"path": "god"
+								}
+							},
+							{
+								"source": {
+									"path": "$['IDVrPod']"
+								},
+								"sink": {
+									"path": "IDVrPod"
+								}
+							},
+							{
+								"source": {
+									"path": "$['nVrPod']"
+								},
+								"sink": {
+									"path": "nVrPod"
+								}
+							},
+							{
+								"source": {
+									"path": "$['IDCOICOP']"
+								},
+								"sink": {
+									"path": "IDCOICOP"
+								}
+							},
+							{
+								"source": {
+									"path": "$['nCOICOP']"
+								},
+								"sink": {
+									"path": "nCOICOP"
+								}
+							},
+							{
+								"source": {
+									"path": "$['vrednost']"
+								},
+								"sink": {
+									"path": "vrednost"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_opendata_http_json",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_opendata_dl_json",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2022-11-16T00:07:35Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

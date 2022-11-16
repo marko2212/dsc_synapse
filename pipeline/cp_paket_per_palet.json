@@ -1,0 +1,78 @@
+{
+	"name": "cp_paket_per_palet",
+	"properties": {
+		"activities": [
+			{
+				"name": "cp_paket_per_palet",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SqlPoolSink",
+						"allowCopyCommand": true
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "MATERIJAL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "materijal",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "Paket\r",
+									"type": "String"
+								},
+								"sink": {
+									"name": "paket",
+									"type": "Int32"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_dl_csv_paket_per_palet",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_syn_ded_pool_paket_per_palet",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2022-11-15T19:25:25Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

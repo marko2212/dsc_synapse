@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 1",
+	"properties": {
+		"content": {
+			"query": "create table dbo.Paket_per_palet (\nmaterijal int  ,\npaket int\n);\n\n\ncreate table dbo.dataset (\nDATUM NVARCHAR (100)  ,\nkolicina int\n);\n\n\ncreate table dbo.Skladiste_palet (\nDATUM NVARCHAR (100)  ,\nkolicina int\n);\n\n\ndrop table dbo.dataset2\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "dsc100dw",
+				"poolName": "dsc100dw"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

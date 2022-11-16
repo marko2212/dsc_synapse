@@ -1,0 +1,62 @@
+{
+	"name": "ds_opendata_http_json",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_http_open_data_stat",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Source"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation",
+				"relativeUrl": "data/WcfJsonRestService.Service1.svc/dataset/010201IND01/2/json"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"idindikator": {
+					"type": "string"
+				},
+				"IDTer": {
+					"type": "string"
+				},
+				"nTer": {
+					"type": "string"
+				},
+				"IDTipNaselja": {
+					"type": "string"
+				},
+				"nTipNaselja": {
+					"type": "string"
+				},
+				"mes": {
+					"type": "string"
+				},
+				"god": {
+					"type": "string"
+				},
+				"IDVrPod": {
+					"type": "string"
+				},
+				"nVrPod": {
+					"type": "string"
+				},
+				"IDCOICOP": {
+					"type": "string"
+				},
+				"nCOICOP": {
+					"type": "string"
+				},
+				"vrednost": {
+					"type": "string"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

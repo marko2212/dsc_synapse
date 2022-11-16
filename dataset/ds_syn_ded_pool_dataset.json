@@ -1,0 +1,27 @@
+{
+	"name": "ds_syn_ded_pool_dataset",
+	"properties": {
+		"annotations": [],
+		"type": "SqlPoolTable",
+		"schema": [
+			{
+				"name": "DATUM",
+				"type": "date"
+			},
+			{
+				"name": "kolicina",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "dataset"
+		},
+		"sqlPool": {
+			"referenceName": "dsc100dw",
+			"type": "SqlPoolReference"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

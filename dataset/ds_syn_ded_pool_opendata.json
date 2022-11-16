@@ -1,0 +1,69 @@
+{
+	"name": "ds_syn_ded_pool_opendata",
+	"properties": {
+		"folder": {
+			"name": "Stage"
+		},
+		"annotations": [],
+		"type": "SqlPoolTable",
+		"schema": [
+			{
+				"name": "idindikator",
+				"type": "varchar"
+			},
+			{
+				"name": "IDTer",
+				"type": "varchar"
+			},
+			{
+				"name": "nTer",
+				"type": "varchar"
+			},
+			{
+				"name": "IDTipNaselja",
+				"type": "varchar"
+			},
+			{
+				"name": "nTipNaselja",
+				"type": "varchar"
+			},
+			{
+				"name": "mes",
+				"type": "varchar"
+			},
+			{
+				"name": "god",
+				"type": "varchar"
+			},
+			{
+				"name": "IDVrPod",
+				"type": "varchar"
+			},
+			{
+				"name": "nVrPod",
+				"type": "varchar"
+			},
+			{
+				"name": "IDCOICOP",
+				"type": "varchar"
+			},
+			{
+				"name": "nCOICOP",
+				"type": "varchar"
+			},
+			{
+				"name": "vrednost",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "stg",
+			"table": "opendata"
+		},
+		"sqlPool": {
+			"referenceName": "dsc100dw",
+			"type": "SqlPoolReference"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

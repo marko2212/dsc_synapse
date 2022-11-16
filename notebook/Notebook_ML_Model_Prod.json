@@ -1,0 +1,762 @@
+{
+	"name": "Notebook_ML_Model_Prod",
+	"properties": {
+		"folder": {
+			"name": "archive"
+		},
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "SparkPool4v32gb",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"runAsWorkspaceSystemIdentity": false,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "338a4498-5b92-496f-ad1f-3cc866275547"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"synapse_widget": {
+				"version": "0.1"
+			},
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/851deb7a-8088-47ca-983d-6e2ffacc52c1/resourceGroups/Azure_DataBrics/providers/Microsoft.Synapse/workspaces/workspacedsc/bigDataPools/SparkPool4v32gb",
+				"name": "SparkPool4v32gb",
+				"type": "Spark",
+				"endpoint": "https://workspacedsc.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/SparkPool4v32gb",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net",
+					"authHeader": null
+				},
+				"sparkVersion": "3.2",
+				"nodeCount": 10,
+				"cores": 4,
+				"memory": 28,
+				"extraHeader": null
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"tags": []
+				},
+				"source": [
+					"### Import library"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"print('marko')"
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"import numpy as np\n",
+					"import pandas as pd\n",
+					"from pandas.plotting import autocorrelation_plot\n",
+					"import matplotlib as mpl\n",
+					"import matplotlib.pyplot as pyplot\n",
+					"import matplotlib.pyplot as plt\n",
+					"import seaborn as sns\n",
+					"from datetime import datetime, timedelta\n",
+					"import time\n",
+					"from dateutil.parser import parse \n",
+					"import math\n",
+					"from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error   # metrics\n",
+					"from statsmodels.tsa.seasonal import seasonal_decompose\n",
+					"from statsmodels.graphics.tsaplots import plot_pacf\n",
+					"from statsmodels.tsa.statespace.sarimax import SARIMAX\n",
+					"from statsmodels.tsa.ar_model import AutoReg\n",
+					"from statsmodels.tsa.arima.model import ARIMA\n",
+					"import pmdarima as pm\n",
+					"\n",
+					"import warnings\n",
+					"warnings.simplefilter(\"ignore\")\n",
+					"\n",
+					"pyplot.rcParams.update({'figure.figsize': (10, 7), 'figure.dpi': 120})\n",
+					"print('Libs are imported')"
+				],
+				"execution_count": 1
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"tags": []
+				},
+				"source": [
+					"### Create function that add all missing date"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"def add_all_date(df, whitout_sun=0):\n",
+					"  rng = pd.date_range(start = df.index[0], end =df.index[-1],  freq='D')        # pocetni datum je prvi index (datum), rajnji datum je poslednji red indexa\n",
+					"  df_date_temp = pd.DataFrame({ 'DATUM': rng}) \n",
+					"  if whitout_sun == 1:\n",
+					"    df_date_temp = df_date_temp[df_date_temp['DATUM'].dt.weekday != 6]          # removing sunday (6) from dummy df_date_temp\n",
+					"  df_date_temp.set_index('DATUM', inplace=True)                                 # set column date as index\n",
+					"  df = df[df.index.weekday != 6]                                                # removing sunday (6) from df\n",
+					"  df = df_date_temp.join(df)                                                    # left join dataset on dummy date\n",
+					"  df = df.fillna(0)                                                             # fill NaN values with 0\n",
+					"  df = df.iloc[:,-1:].astype(int)                                               # convert string to int\n",
+					"  return df"
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"jp-MarkdownHeadingCollapsed": true,
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"tags": []
+				},
+				"source": [
+					"#### Azure database connection string"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"tags": []
+				},
+				"source": [
+					"# credentials\n",
+					"jdbcHostname = \"srv-db-sql-dmd.database.windows.net\"\n",
+					"jdbcDatabase = \"db-sql-dmd\"\n",
+					"jdbcPort = \"1433\"\n",
+					"username = \"marko\"\n",
+					"password = \"5Avramovic!\"\n",
+					"jdbcUrl = \"jdbc:sqlserver://{0}:{1};database={2}\".format(jdbcHostname, jdbcPort, jdbcDatabase)\n",
+					"connectionProperties = {\n",
+					"    \"user\" : username,\n",
+					"    \"password\" : password,\n",
+					"    \"driver\" : \"com.microsoft.sqlserver.jdbc.SQLServerDriver\"\n",
+					"}"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"tags": []
+				},
+				"source": [
+					"### Evaluating the models with data - create function"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"def metric_table(test, predictions):\n",
+					"  mse = mean_squared_error(test, predictions)\n",
+					"  model_r2, model_RMSE, model_MAE, model_MSE, model_Adj_R2 = [], [], [], [], []\n",
+					"\n",
+					"  r2 = r2_score(test, predictions)\n",
+					"  rmse = np.sqrt(mean_squared_error(test, predictions))\n",
+					"  mae = mean_absolute_error(test, predictions)\n",
+					"  mse = mean_squared_error(test, predictions)\n",
+					"  # mape = mean_absolute_percentage_error(test, predictions)\n",
+					"  adj_r2 = 1-(1-r2)*(test.shape[0]-1)/(test.shape[0]-1-1)\n",
+					"\n",
+					"  model_r2.append(r2)\n",
+					"  model_RMSE.append(rmse)\n",
+					"  model_MAE.append(mae)\n",
+					"  model_MSE.append(mse)\n",
+					"  # model_MAPE.append(mape)\n",
+					"  model_Adj_R2.append(adj_r2)\n",
+					"\n",
+					"  df_result = pd.DataFrame({\"R2\":model_r2, \"Adj_R2\": model_Adj_R2, \"RMSE\": model_RMSE, \"MAE\":model_MAE, \"MSE\": model_MSE})\n",
+					"  df_result = round(df_result,3)\n",
+					"  df_result = df_result.sort_values(\"R2\", ascending=False)\n",
+					"  df_result\n",
+					"  return df_result"
+				],
+				"execution_count": 4
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### Create arima function"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"def arima(df, order = [3,0,0], n = 15):\n",
+					"    \n",
+					"    # order = [28,0,0]\n",
+					"    # order = [3,0,0]\n",
+					"    model = ARIMA(df, order=(order))\n",
+					"    model_fit = model.fit()\n",
+					"    prediction = model_fit.forecast(n)\n",
+					"\n",
+					"    # korekcije\n",
+					"    prediction = prediction.clip(lower=0)                                         # sve negativne vrednosti svedi na 0\n",
+					"    prediction = add_all_date(prediction)                                         # set sundey to 0\n",
+					"    prediction = prediction.rename(columns={'predicted_mean': 'prediction'})        # set the name of column as item\n",
+					"    prediction.head()\n",
+					"    return prediction"
+				],
+				"execution_count": 5
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"jp-MarkdownHeadingCollapsed": true,
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"tags": []
+				},
+				"source": [
+					"#### Create import dataset total function"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# def import_ds_total(item, brend, table):\n",
+					"#     pushdown_query = \"(SELECT DATUM, {0} FROM {2} ) {1}\".format(item,brend,table) \n",
+					"#     df_spark = spark.read.jdbc(url=jdbcUrl, table=pushdown_query, properties=connectionProperties)\n",
+					"#     df = df_spark.toPandas()                      # Spark df to Pandas df\n",
+					"#     df = df.sort_values(by=\"DATUM\")               # Sort dataframe by date\n",
+					"#     df.set_index('DATUM', inplace=True)           # convert DATUM column to index\n",
+					"#     df.index = pd.to_datetime(df.index)           # convert index to datetime\n",
+					"#     df = add_all_date(df, )                       # add all missing date with (df, 0) or without (df, 1) sunday\n",
+					"#     df.head(2)\n",
+					"#     return df \n",
+					""
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### Train ARIMA model and prediction"
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"tags": []
+				},
+				"source": [
+					"### Import dataset"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"tags": []
+				},
+				"source": [
+					"import pandas as pd\n",
+					"df = pd.read_csv(\"dataset.csv\")\n",
+					"df\n",
+					"\n",
+					"# add all missing date with 0\n",
+					"df = df.sort_values(by=\"DATUM\")               # Sort dataframe by date\n",
+					"df.set_index('DATUM', inplace=True)           # convert DATUM column to index\n",
+					"df.index = pd.to_datetime(df.index)           # convert index to datetime\n",
+					"df = add_all_date(df, )                       # add all missing date with (df, 0) or without (df, 1) sunday\n",
+					"df.head(2)\n",
+					"df\n",
+					"\n",
+					"# df = df.iloc[:-78, -1:]"
+				],
+				"execution_count": 16
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"tags": []
+				},
+				"source": [
+					"### Splitting dataset"
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"n = 15\n",
+					"train, test = df.iloc[:-n, -1:], df.iloc[-n:, -1:]                    # slice number for train, test - dataframe\n",
+					"test.head()"
+				],
+				"execution_count": 17
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"tags": []
+				},
+				"source": [
+					"### Prediciton with ARIMA"
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%%time\n",
+					"prediction = arima(train)\n",
+					"prediction = arima(train, [28,0,0], n)\n",
+					"# prediction = arima(train, [15,0,0], n)\n",
+					"\n",
+					"# prediction = prediction.rename({'Kolicina': 'prediction'}, axis=1)  # new method\n",
+					"prediction.head()\n",
+					""
+				],
+				"execution_count": 18
+			},
+			{
+				"cell_type": "markdown",
+				"source": [
+					"### Visualisation"
+				]
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"pyplot.figure(figsize=(8, 5), dpi=80)\n",
+					"\n",
+					"ax = prediction['prediction'].plot(color='red')\n",
+					"test.rename({'Kolicina': 'real'}, axis=1).plot(ax=ax)\n",
+					"# test.plot(ax=ax)\n",
+					"pyplot.legend(loc=\"upper left\")\n",
+					"metric_table(test, prediction)             # metric table"
+				],
+				"execution_count": 15
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"jp-MarkdownHeadingCollapsed": true,
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"tags": []
+				},
+				"source": [
+					"### Loop brends - import dataset and applay arima (using custom function)"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# Delete prediction_container\n",
+					"if 'prediction_contaier' in globals(): \n",
+					"    del prediction_contaier\n",
+					"    print('deleted')\n",
+					"\n",
+					"# set brend and table\n",
+					"# STAVKE_NA_KOMIS_NALOGU, KOMIS_NALOG, POVRAT_KARTON, POVRAT_KOMAD,  komisionAggFinal,  povratAggFinal\n",
+					"brend = 'Grupno'\n",
+					"table = 'src.komisionAggFinal'"
+				],
+				"execution_count": 9
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# connect to database with credentials, execut SQL \n",
+					"item = 'STAVKE_NA_KOMIS_NALOGU'\n",
+					"df = import_ds_total(item, brend, table)\n",
+					"\n",
+					"# call arima function on dataset\n",
+					"prediction_contaier = arima(df)\n",
+					"prediction_contaier.head(2)"
+				],
+				"execution_count": 23
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# connect to database with credentials, execut SQL \n",
+					"item = 'KOMIS_NALOG'\n",
+					"df = import_ds_total(item, brend, table)\n",
+					"\n",
+					"# call custom arima function on dataset\n",
+					"prediction_contaier = arima(df)\n",
+					"prediction_contaier.head(2)"
+				],
+				"execution_count": 24
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# connect to database with credentials, execut SQL \n",
+					"item = 'POVRAT_KARTON'\n",
+					"table = 'src.povratAggFinal'\n",
+					"\n",
+					"df = import_ds_total(item, brend, table)\n",
+					"\n",
+					"# call arima function on dataset\n",
+					"prediction_contaier = arima(df)\n",
+					"prediction_contaier.head(2)"
+				],
+				"execution_count": 25
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# connect to database with credentials, execut SQL \n",
+					"item = 'POVRAT_KOMAD'\n",
+					"df = import_ds_total(item, brend, table)\n",
+					"\n",
+					"# call arima function on dataset\n",
+					"prediction_contaier = arima(df)\n",
+					"prediction_contaier.head(2)"
+				],
+				"execution_count": 26
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"jp-MarkdownHeadingCollapsed": true,
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"tags": []
+				},
+				"source": [
+					"### Covert prediction_contaier index to column and store on blob storage"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# covert index to column\n",
+					"prediction_contaier['DATUM'] = prediction_contaier.index                      \n",
+					"# sat DATUM column to be first\n",
+					"column_name = list(prediction_contaier.columns.values)\n",
+					"column_name_wo_datum = column_name\n",
+					"column_name_wo_datum.remove('DATUM')\n",
+					"prediction_contaier = prediction_contaier[['DATUM'] + column_name_wo_datum]\n",
+					"prediction_contaier.head()\n",
+					"\n",
+					"\n",
+					"# Output using Spark\n",
+					"folder_name = brend\n",
+					"(sqlContext.createDataFrame(prediction_contaier)\n",
+					" .coalesce(1)\n",
+					" .write\n",
+					" .mode(\"overwrite\")\n",
+					" .option(\"header\", \"true\")\n",
+					" .format(\"com.databricks.spark.csv\")\n",
+					" .save('abfss://processed@dlsynapsedts.dfs.core.windows.net/dmd/' + folder_name))"
+				],
+				"execution_count": 27
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"prediction_contaier.head(10)"
+				],
+				"execution_count": 28
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"jp-MarkdownHeadingCollapsed": true,
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"tags": []
+				},
+				"source": [
+					"# Write prediction_contaier df to Azure SQL database using spark"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": {
+							"outputs_hidden": false,
+							"source_hidden": false
+						},
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": {
+						"outputs_hidden": false,
+						"source_hidden": false
+					}
+				},
+				"source": [
+					"predictionGrupnoDF = spark.createDataFrame(prediction_contaier)                   # Create PySpark DataFrame from Pandas\n",
+					"predictionGrupnoDF.write.jdbc(url=jdbcUrl, table=\"src.predictionGrupno\", properties=connectionProperties, mode =\"overwrite\")"
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### Graph"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"outputs_hidden": {
+							"outputs_hidden": true,
+							"source_hidden": false
+						},
+						"source_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": {
+						"outputs_hidden": true,
+						"source_hidden": false
+					}
+				},
+				"source": [
+					"# pyplot.figure(figsize=(18, 6), dpi=80)       # adjust graph size\n",
+					"# pyplot.plot(prediction, color='red', label='prediction')\n",
+					"# pyplot.legend(loc=\"upper left\")\n",
+					"# pyplot.show()"
+				]
+			}
+		]
+	}
+}

@@ -1,0 +1,36 @@
+{
+	"name": "pi_ml",
+	"properties": {
+		"activities": [
+			{
+				"name": "Run ML notebook",
+				"type": "SynapseNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebook": {
+						"referenceName": "Notebook_ML_Model_ARIMA",
+						"type": "NotebookReference"
+					},
+					"snapshot": true,
+					"sparkPool": {
+						"referenceName": "SparkPool4v32gb",
+						"type": "BigDataPoolReference"
+					},
+					"executorSize": "Small",
+					"driverSize": "Small"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2022-11-15T21:32:05Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

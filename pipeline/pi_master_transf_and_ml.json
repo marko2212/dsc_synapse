@@ -1,0 +1,43 @@
+{
+	"name": "pi_master_transf_and_ml",
+	"properties": {
+		"activities": [
+			{
+				"name": "ex_pi_store_prc_create_dataset",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pi_store_prc_create_dataset",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "ex_pi_ml",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ex_pi_store_prc_create_dataset",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pi_ml",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2022-11-15T21:45:30Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

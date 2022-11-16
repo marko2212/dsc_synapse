@@ -1,0 +1,30 @@
+{
+	"name": "pi_store_prc_create_dataset",
+	"properties": {
+		"activities": [
+			{
+				"name": "SQL pool stored procedure create_dataset",
+				"type": "SqlPoolStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"sqlPool": {
+					"referenceName": "dsc100dw",
+					"type": "SqlPoolReference"
+				},
+				"typeProperties": {
+					"storedProcedureName": "[prc].[create_dataset]"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2022-11-15T21:30:08Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}
